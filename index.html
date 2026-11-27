@@ -400,6 +400,14 @@ function load(){
 }
 let cfg=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg));}catch(e){}}
+/* 開くたびに、人数分の絵文字の割り当てを入れ替える(全員が前回と違う絵文字になるように) */
+(function shuffleEmojis(){
+  const n=Math.min(cfg.n,cfg.emojis.length);if(n<2)return;
+  const old=cfg.emojis.slice(0,n);let p,tries=0;
+  do{p=old.map((_,i)=>i);for(let i=n-1;i>0;i--){const j=rnd(i+1);[p[i],p[j]]=[p[j],p[i]];}tries++;}
+  while(tries<200&&p.some((v,i)=>v===i||old[v]===old[i]));
+  cfg.emojis.splice(0,n,...p.map(v=>old[v]));save();
+})();
 const pname=i=>(cfg.names[i]||'').trim()||String(i+1);
 const pemo=i=>cfg.emojis[i]||'🙂';
 /* 色: 色相30°刻みの12色を5つ飛ばしで並べる→隣同士は60°以上離れ、全員別色。明るさも交互に変える(パステル) */
