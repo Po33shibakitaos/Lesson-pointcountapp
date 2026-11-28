@@ -227,7 +227,7 @@ body.shake{animation:shake .5s}
       <button data-set="food">🍕 たべもの</button>
       <button data-set="space">🚀 うちゅう</button>
     </div>
-    <p class="hint">各行の絵文字の欄を書き換えると1人ずつ変えられます(キーボードの絵文字入力を使ってください)。色は自動で割り振られます。</p>
+    <p class="hint">アプリを開くたびに、選んだジャンルの中で絵文字と順番が自動で入れ替わります。各行の絵文字の欄を書き換えると1人ずつ変えられます(キーボードの絵文字入力を使ってください)。色は自動で割り振られます。</p>
   </div>
   <div class="panel">
     <b>みんな・チームのキャラ</b>
@@ -386,10 +386,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- 設定 ---------- */
 const EMOJI_SETS={
-  animals:['🐶','🐱','🐰','🦊','🐻','🐼','🐸','🐵','🦁','🐯','🐷','🐧'],
-  monsters:['👹','👻','👽','🤖','🦖','🐉','🧟','🦄','👾','🎃','🦇','🕷️'],
-  food:['🍎','🍌','🍕','🍔','🍟','🍩','🍙','🍣','🍓','🍉','🍪','🍦'],
-  space:['🚀','🛸','🌞','🌙','⭐','🪐','☄️','🌍','👨‍🚀','🛰️','🌈','⚡']
+  animals:['🐶','🐱','🐰','🦊','🐻','🐼','🐸','🐵','🦁','🐯','🐷','🐧','🐨','🐮','🐹','🐭','🐔','🐤','🦉','🐢','🐙','🐬','🦒','🐘'],
+  monsters:['👹','👻','👽','🤖','🦖','🐉','🧟','🦄','👾','🎃','🦇','🕷️','🧛','🧙','🧞','🧜','👺','💀','🦕','🐲','🐊','🦂','🐍','🦑'],
+  food:['🍎','🍌','🍕','🍔','🍟','🍩','🍙','🍣','🍓','🍉','🍪','🍦','🍇','🍑','🍒','🍋','🥕','🌽','🍞','🍰','🧁','🍫','🍭','🍿'],
+  space:['🚀','🛸','🌞','🌙','⭐','🪐','☄️','🌍','👨‍🚀','🛰️','🌈','⚡','🌟','💫','✨','🌠','🌌','🔭','🌕','🌛','🌎','🌏','👩‍🚀','🌝']
 };
 const KEY='lesson-points-v1';
 const DEF={n:6,names:Array(12).fill(''),emojis:[...EMOJI_SETS.animals],gEmoji:['🦖','🐉','👾','🤖'],teamK:2,teamOf:[],
@@ -400,13 +400,20 @@ function load(){
 }
 let cfg=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg));}catch(e){}}
-/* 開くたびに、人数分の絵文字の割り当てを入れ替える(全員が前回と違う絵文字になるように) */
+/* 開くたびに、選んでいるジャンルの中から絵文字を選び直して順番もシャッフルする。
+   できるだけ前回いなかった絵文字を使い、全員ちがう絵文字にする */
+function pickEmojis(set,avoid){
+  const all=[...EMOJI_SETS[set]],sh=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+  const av=new Set(avoid||[]),fresh=sh(all.filter(e=>!av.has(e))),rest=sh(all.filter(e=>av.has(e)));
+  return sh([...fresh,...rest].slice(0,12));
+}
 (function shuffleEmojis(){
-  const n=Math.min(cfg.n,cfg.emojis.length);if(n<2)return;
-  const old=cfg.emojis.slice(0,n);let p,tries=0;
-  do{p=old.map((_,i)=>i);for(let i=n-1;i>0;i--){const j=rnd(i+1);[p[i],p[j]]=[p[j],p[i]];}tries++;}
-  while(tries<200&&p.some((v,i)=>v===i||old[v]===old[i]));
-  cfg.emojis.splice(0,n,...p.map(v=>old[v]));save();
+  if(!EMOJI_SETS[cfg.set]){ /* 前のデータにはジャンルの記録がないので、今の絵文字から推定 */
+    let best='animals',bc=-1;
+    for(const k in EMOJI_SETS){const c=cfg.emojis.filter(e=>EMOJI_SETS[k].includes(e)).length;if(c>bc){bc=c;best=k;}}
+    cfg.set=best;
+  }
+  cfg.emojis=pickEmojis(cfg.set,cfg.emojis.slice(0,cfg.n));save();
 })();
 const pname=i=>(cfg.names[i]||'').trim()||String(i+1);
 const pemo=i=>cfg.emojis[i]||'🙂';
@@ -625,7 +632,7 @@ function renderMembers(){
   }
 }
 $('#nSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;cfg.n=+b.dataset.n;save();renderMembers();};
-$('#setSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;cfg.emojis=[...EMOJI_SETS[b.dataset.set]];save();renderMembers();};
+$('#setSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;cfg.set=b.dataset.set;cfg.emojis=pickEmojis(cfg.set);save();renderMembers();};
 
 /* ---------- ポイントカウント ---------- */
 const G={on:false,over:false,pts:[],cleared:[],dead:[],att:1,lastFate:-1,busy:false,U:[],unitOf:[]};
